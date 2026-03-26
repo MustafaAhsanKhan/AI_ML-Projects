@@ -36,7 +36,7 @@ VAD_PRE_ROLL_CHUNKS: int = 5    # Chunks prepended before speech onset (~160ms)
 # ---------------------------------------------------------------------------
 
 LLM_N_GPU_LAYERS: int = -1      # -1 = offload all layers to Metal
-LLM_CONTEXT_SIZE: int = 4096
+LLM_CONTEXT_SIZE: int = 8192  # Max tokens in LLM context window (including system prompt)
 LLM_MAX_TOKENS: int = 512
 LLM_TEMPERATURE: float = 0.7
 

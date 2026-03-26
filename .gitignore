@@ -7,5 +7,6 @@ __pycache__/
 
 # Local LLM model artifacts
 *.gguf
+models/
 
 .DS_Store
