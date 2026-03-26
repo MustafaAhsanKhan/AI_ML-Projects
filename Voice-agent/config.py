@@ -8,9 +8,7 @@ BASE_DIR = Path(__file__).parent
 
 MODELS_DIR = BASE_DIR / "models"
 
-# Set this to the absolute path of your Llama 3 8B Instruct Q4_0 .gguf file.
-# Example: Path("/Users/you/.cache/lm-studio/models/llama-3-8b-instruct.Q4_0.gguf")
-LLM_MODEL_PATH: Path = Path("/your/actual/path/to/Meta-Llama-3-8B-Instruct-Q4_0.gguf")
+LLM_MODEL_PATH: Path = Path("/Users/mustafa/Desktop/AI_ML-Projects/Voice-agent/llm/Meta-Llama-3-8B-Instruct-Q5_K_M.gguf")
 
 WHISPER_MODEL_PATH: Path = MODELS_DIR / "whisper"
 PIPER_MODEL_PATH: Path = MODELS_DIR / "piper" / "en_US-lessac-medium.onnx"

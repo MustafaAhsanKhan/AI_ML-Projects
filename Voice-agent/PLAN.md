@@ -29,7 +29,7 @@
 
 | Component | Model | Size |
 |---|---|---|
-| LLM | Llama 3 8B Instruct Q4_0 | ~4.7 GB |
+| LLM | Meta-Llama-3-8B-Instruct-Q5_K_M | ~5.7 GB |
 | STT | faster-whisper `base.en` | ~150 MB |
 | TTS | Piper `en_US-lessac-medium` | ~63 MB |
 | VAD | Silero VAD v5 ONNX | ~5 MB |
