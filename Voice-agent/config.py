@@ -27,8 +27,8 @@ CHANNELS: int = 1
 # VAD
 # ---------------------------------------------------------------------------
 
-VAD_THRESHOLD: float = 0.5      # Speech onset probability
-VAD_SILENCE_CHUNKS: int = 20    # Consecutive silent chunks before SpeechEnd (~640ms)
+VAD_THRESHOLD: float = 0.35     # Speech onset probability (more permissive for live mic)
+VAD_SILENCE_CHUNKS: int = 15    # Consecutive silent chunks before SpeechEnd (~480ms)
 VAD_PRE_ROLL_CHUNKS: int = 5    # Chunks prepended before speech onset (~160ms)
 
 # ---------------------------------------------------------------------------

@@ -23,6 +23,22 @@ def _configure_logging() -> None:
     )
 
 
+async def _mic_info_loop(audio_input: AudioInputStream, audio_in_q: asyncio.Queue) -> None:
+    """Log basic microphone signal diagnostics every 0.5 seconds."""
+    while True:
+        await asyncio.sleep(0.5)
+        rms, peak, _last_ts, chunks_seen = audio_input.get_metrics()
+
+        logger.info(
+            "Mic info | rms=%.5f peak=%.5f chunks=%d qsize=%d active=%s",
+            rms,
+            peak,
+            chunks_seen,
+            audio_in_q.qsize(),
+            audio_input.is_active,
+        )
+
+
 async def main() -> None:
     _configure_logging()
 
@@ -80,6 +96,7 @@ async def main() -> None:
 
     vad_task: asyncio.Task | None = None
     orchestrator_task: asyncio.Task | None = None
+    mic_info_task: asyncio.Task | None = None
 
     try:
         logger.info("Starting audio streams")
@@ -88,11 +105,19 @@ async def main() -> None:
 
         vad_task = asyncio.create_task(vad.run(audio_in_q, vad_event_q), name="vad_loop")
         orchestrator_task = asyncio.create_task(orchestrator.run(), name="orchestrator")
+        mic_info_task = asyncio.create_task(
+            _mic_info_loop(audio_input, audio_in_q),
+            name="mic_info_loop",
+        )
 
         logger.info("Voice assistant running. Press Ctrl+C to stop.")
         await asyncio.gather(vad_task, orchestrator_task)
     finally:
         logger.info("Shutting down")
+
+        if mic_info_task is not None and not mic_info_task.done():
+            mic_info_task.cancel()
+            await asyncio.gather(mic_info_task, return_exceptions=True)
 
         if vad_task is not None and not vad_task.done():
             vad_task.cancel()

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time as pytime
 
 import numpy as np
 import sounddevice as sd
@@ -27,6 +28,10 @@ class AudioInputStream:
         self._queue = queue
         self._loop = loop
         self._stream: sd.InputStream | None = None
+        self._last_rms: float = 0.0
+        self._last_peak: float = 0.0
+        self._last_update_ts: float = 0.0
+        self._chunks_seen: int = 0
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -69,7 +74,7 @@ class AudioInputStream:
         self,
         indata: np.ndarray,   # shape (blocksize, channels), float32
         frames: int,
-        time,                 # CData time info — unused
+        time_info,            # CData time info — unused
         status: sd.CallbackFlags,
     ) -> None:
         if status:
@@ -78,6 +83,10 @@ class AudioInputStream:
 
         # Flatten to 1-D mono array and copy (sounddevice reuses the buffer)
         chunk: np.ndarray = indata[:, 0].copy()
+        self._last_rms = float(np.sqrt(np.mean(chunk * chunk)))
+        self._last_peak = float(np.max(np.abs(chunk)))
+        self._last_update_ts = pytime.time()
+        self._chunks_seen += 1
 
         # Bridge C thread → asyncio event loop thread-safely.
         # put_nowait is used so that a backed-up queue causes dropped frames
@@ -94,3 +103,12 @@ class AudioInputStream:
     @property
     def is_active(self) -> bool:
         return self._stream is not None and self._stream.active
+
+    def get_metrics(self) -> tuple[float, float, float, int]:
+        """Return (rms, peak, last_update_ts, chunks_seen) for mic diagnostics."""
+        return (
+            self._last_rms,
+            self._last_peak,
+            self._last_update_ts,
+            self._chunks_seen,
+        )

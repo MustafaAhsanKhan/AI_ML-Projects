@@ -99,7 +99,7 @@ class WhisperEngine:
                         continue
 
                     await stt_result_q.put(TranscriptionResult(text=text))
-                    logger.debug("Transcription emitted (%d chars)", len(text))
+                    logger.info("Transcription: %s", text)
                 finally:
                     vad_event_q.task_done()
 

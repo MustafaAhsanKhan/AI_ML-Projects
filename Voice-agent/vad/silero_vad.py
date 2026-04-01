@@ -36,6 +36,7 @@ class SileroVAD:
 
         self._h: np.ndarray | None = None
         self._c: np.ndarray | None = None
+        self._state: np.ndarray | None = None
 
         self._pre_roll: deque[np.ndarray] = deque(maxlen=config.VAD_PRE_ROLL_CHUNKS)
         self._buffer = AudioBuffer(pre_roll_chunks=config.VAD_PRE_ROLL_CHUNKS)
@@ -59,13 +60,24 @@ class SileroVAD:
         )
 
     def _initialize_recurrent_state(self) -> None:
-        # Typical Silero recurrent state shape. We keep this default unless a
-        # model-specific shape is explicit in input metadata.
+        # Handle both common Silero ONNX signatures:
+        # 1) split recurrent inputs: h/c
+        # 2) single recurrent input: state
+        has_state = any(name.lower() == "state" for name in self._input_names)
+        if has_state:
+            state_shape = self._get_input_shape_hint("state", default=[2, 1, 128])
+            self._state = np.zeros(state_shape, dtype=np.float32)
+            self._h = None
+            self._c = None
+            return
+
+        # Fallback to split-state variants.
         h_shape = self._get_input_shape_hint("h", default=[2, 1, 64])
         c_shape = self._get_input_shape_hint("c", default=[2, 1, 64])
 
         self._h = np.zeros(h_shape, dtype=np.float32)
         self._c = np.zeros(c_shape, dtype=np.float32)
+        self._state = None
 
     def _get_input_shape_hint(self, token: str, default: list[int]) -> list[int]:
         if self._session is None:
@@ -109,10 +121,17 @@ class SileroVAD:
                 if self._c is None:
                     self._initialize_recurrent_state()
                 feed[name] = self._c
+            elif lname == "state" or lname.startswith("state"):
+                if self._state is None:
+                    self._initialize_recurrent_state()
+                feed[name] = self._state
             else:
                 # Best-effort fallback for uncommon input names.
-                if "state" in lname and self._h is not None:
-                    feed[name] = self._h
+                if "state" in lname:
+                    if self._state is not None:
+                        feed[name] = self._state
+                    elif self._h is not None:
+                        feed[name] = self._h
 
         outputs = self._session.run(None, feed)
 
@@ -129,6 +148,8 @@ class SileroVAD:
                 self._h = np.asarray(arr, dtype=np.float32)
             elif lname.startswith("c") or lname in {"cn", "c_out"}:
                 self._c = np.asarray(arr, dtype=np.float32)
+            elif lname == "staten" or lname.startswith("state"):
+                self._state = np.asarray(arr, dtype=np.float32)
 
         # Fallback positional state update for common [prob, h, c] signatures.
         if len(outputs) >= 3:
@@ -193,7 +214,7 @@ class SileroVAD:
                             pre_roll_audio = np.array([], dtype=np.float32)
 
                         await vad_event_q.put(SpeechStartEvent(pre_roll_audio=pre_roll_audio))
-                        logger.debug("Speech start detected (prob=%.3f)", prob)
+                        logger.info("Speech start detected (prob=%.3f)", prob)
 
                     elif speaking:
                         if prob > self._threshold:
@@ -208,7 +229,7 @@ class SileroVAD:
 
                             if len(audio) > 0:
                                 await vad_event_q.put(SpeechEndEvent(audio=audio))
-                                logger.debug(
+                                logger.info(
                                     "Speech end detected (%d samples)",
                                     len(audio),
                                 )
