@@ -250,3 +250,34 @@ def build_model_context(session_id):
     }
 
     return [summary_message] + recent_messages
+
+
+def get_session_debug_state(session_id):
+    _ensure_session(session_id)
+
+    history = sessions[session_id]
+    last_summarized_index = session_last_summarized_index[session_id]
+    summarize_upto = max(0, len(history) - RECENT_MESSAGE_WINDOW)
+    unsummarized_count = max(0, summarize_upto - last_summarized_index)
+    state = session_semantic_state[session_id]
+
+    return {
+        "session_id": session_id,
+        "history_count": len(history),
+        "summary": session_summaries[session_id],
+        "summary_exists": bool(session_summaries[session_id]),
+        "last_summarized_index": last_summarized_index,
+        "unsummarized_count": unsummarized_count,
+        "should_summarize_now": should_summarize(session_id),
+        "summary_policy": {
+            "message_interval": SUMMARY_EVERY_MESSAGES,
+            "recent_message_window": RECENT_MESSAGE_WINDOW,
+            "early_char_threshold": EARLY_SUMMARY_CHAR_THRESHOLD,
+        },
+        "semantic_state": {
+            "identity": state["identity"],
+            "decisions": state["decisions"],
+            "top_topics": [topic for topic, _ in state["topic_counts"].most_common(10)],
+        },
+        "recent_messages": history[-RECENT_MESSAGE_WINDOW:],
+    }

@@ -7,6 +7,7 @@ from memory import (
     SUMMARY_EVERY_MESSAGES,
     append_message,
     build_model_context,
+    get_session_debug_state,
     update_summary,
 )
 
@@ -43,3 +44,10 @@ def chat(req: ChatRequest):
             "early_char_threshold": EARLY_SUMMARY_CHAR_THRESHOLD,
         },
     }
+
+
+@app.get("/debug/{session_id}")
+def debug_session(session_id: str):
+    # Keep debug state current before returning internals.
+    update_summary(session_id)
+    return get_session_debug_state(session_id)
