@@ -24,7 +24,7 @@ def chat(req: ChatRequest):
     update_summary(session_id)
 
     # Send summary + recent raw messages to the model.
-    context_messages = build_model_context(session_id)
+    context_messages = build_model_context(session_id, req.message)
 
     # Get AI response
     response = get_response(context_messages)
@@ -38,11 +38,6 @@ def chat(req: ChatRequest):
     return {
         "response": response,
         "summary": summary,
-        "summary_policy": {
-            "message_interval": SUMMARY_EVERY_MESSAGES,
-            "recent_message_window": RECENT_MESSAGE_WINDOW,
-            "early_char_threshold": EARLY_SUMMARY_CHAR_THRESHOLD,
-        },
     }
 
 
